@@ -49,15 +49,16 @@ jobs:
       - name: Deploy to GCE
         run: |
           # 기존 컨테이너 제거
-          gcloud compute ssh "$GCE_INSTANCE" --zone "$GCE_INSTANCE_ZONE" --command "
-          sudo docker rm -f web-server || true
-          "
+          gcloud compute ssh "$GCE_INSTANCE" --zone "$GCE_INSTANCE_ZONE" --command '
+            sudo docker rm -f web-server || true
+          '
     
           # 새 컨테이너 실행
-          gcloud compute ssh "$GCE_INSTANCE" --zone "$GCE_INSTANCE_ZONE" --command "
-          sudo docker run -d \
-          -p $CONTAINER_PORT:$CONTAINER_PORT \
-          --name web-server \
-          --env-file /home/jjeongbin0826/.env \
-          -v /home/jjeongbin0826/google_application_credentials.json:/app/google_application_credentials.json:ro \
-          $DOCKERHUB_USERNAME/$IMAGE:$GITHUB_SHA
+          gcloud compute ssh "$GCE_INSTANCE" --zone "$GCE_INSTANCE_ZONE" --command '
+            sudo docker run -d \
+              -p '"$CONTAINER_PORT"':'"$CONTAINER_PORT"' \
+              --name web-server \
+              --env-file /home/jjeongbin0826/.env \
+              -v /home/jjeongbin0826/google_application_credentials.json:/app/google_application_credentials.json:ro \
+              '"$DOCKERHUB_USERNAME"'/'"$IMAGE"':'"$GITHUB_SHA"'
+          '
