@@ -29,7 +29,8 @@ jobs:
         run: |
           docker build \
             -t "$DOCKERHUB_USERNAME/$IMAGE:$GITHUB_SHA" \
-            new/model_deploy
+            -f Dockerfile \
+            .
 
       - name: Docker push
         run: |
