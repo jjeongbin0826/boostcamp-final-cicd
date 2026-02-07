@@ -1,37 +1,213 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정보 추가 입력 - 원자재 시세</title>
+    <style>
+        /* 전체 레이아웃 중앙 정렬 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f1f3f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center; /* 세로 중앙 정렬 추가 */
+            min-height: 100vh;
+        }
 
-{% block title %}정보 추가 입력{% endblock %}
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background-color: #f8f9fa;
+            height: 100vh; /* 화면 높이에 맞춤 */
+            padding: 24px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        }
 
-{% block content %}
+        /* 상단 내비게이션 (중앙 정렬과 별개로 상단 고정) */
+        .nav-bar {
+            display: flex;
+            align-items: center;
+            height: 40px;
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            font-size: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #1a1a1a;
+            position: absolute; /* 뒤로가기 버튼을 절대 위치로 빼서 타이틀 중앙 정렬 유지 */
+        }
+
+        .nav-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1a1a;
+            width: 100%;
+            text-align: center;
+        }
+
+        /* 실제 중앙에 배치될 박스 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* 컨텐츠 세로 중앙 정렬 */
+            align-items: center; /* 컨텐츠 가로 중앙 정렬 */
+            padding-bottom: 40px; /* 네비바 두께만큼 하단 보정 */
+        }
+
+        .profile-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 35px;
+            object-fit: cover;
+            margin-bottom: 20px;
+            border: 4px solid #fff;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0 0 8px 0;
+            color: #1a1a1a;
+            text-align: center;
+        }
+
+        .welcome-desc {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 40px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        /* 폼 너비 꽉 차게 조절 */
+        form {
+            width: 100%;
+            max-width: 360px; /* 폼이 너무 퍼지지 않게 제한 */
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"],
+        input[type="date"] {
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid #e9ecef;
+            background-color: #fff;
+            font-size: 15px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: #5c9eff;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .radio-item {
+            flex: 1;
+        }
+
+        .radio-item input { display: none; }
+
+        .radio-label {
+            display: block;
+            padding: 14px;
+            text-align: center;
+            background-color: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #868e96;
+            cursor: pointer;
+        }
+
+        .radio-item input:checked + .radio-label {
+            background-color: #f0f7ff;
+            border-color: #5c9eff;
+            color: #5c9eff;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background-color: #5c9eff;
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+
     <div class="container">
-        <img src="{{ temp_info.get('profile_pic') or 'https://storage.googleapis.com/web-service-predict/profiles/default-profile.jpg' }}" class="profile-preview">
-        <h2>🎉 환영합니다!</h2>
-        <p>서비스 이용을 위해 정보를 완성해주세요.</p>
-        
-        <form action="/extra-info" method="post">
-            <div class="form-group">
-                <label>닉네임</label>
-                <input type="text" name="nickname" value="{{ temp_info.get('nickname') or '' }}" placeholder="사용할 닉네임을 입력하세요" required>
-            </div>
+        <div class="nav-bar">
+            <div class="back-btn" onclick="history.back()">〈</div>
+            <div class="nav-title">정보 완성하기</div>
+        </div>
+
+        <div class="main-content">
+            <img src="{{ temp_info.get('profile_pic') or 'https://storage.googleapis.com/web-service-predict/profiles/default-profile.jpg' }}" class="profile-preview">
             
-            <div class="form-group">
-                <label>생년월일</label>
-                <input type="date" name="birth_date" required>
-            </div>
+            <h2>🎉 환영합니다!</h2>
+            <p class="welcome-desc">원활한 서비스 이용을 위해<br>아래 정보를 완성해주세요.</p>
             
-            <div class="form-group">
-                <label>성별</label>
-                <div class="radio-group">
-                    <label class="radio-item">
-                        <input type="radio" name="gender" value="male" checked> 남성
-                    </label>
-                    <label class="radio-item">
-                        <input type="radio" name="gender" value="female"> 여성
-                    </label>
+            <form action="/extra-info" method="post">
+                <div class="form-group">
+                    <label>닉네임</label>
+                    <input type="text" name="nickname" value="{{ temp_info.get('nickname') or '' }}" placeholder="닉네임을 입력하세요" required>
                 </div>
-            </div>
-            
-            <button type="submit">가입 완료하기</button>
-        </form>
+                
+                <div class="form-group">
+                    <label>생년월일</label>
+                    <input type="date" name="birth_date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>성별</label>
+                    <div class="radio-group">
+                        <label class="radio-item">
+                            <input type="radio" name="gender" value="male" checked>
+                            <span class="radio-label">남성</span>
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="gender" value="female">
+                            <span class="radio-label">여성</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="submit-btn">가입 완료하기</button>
+            </form>
+        </div>
     </div>
-{% endblock %}

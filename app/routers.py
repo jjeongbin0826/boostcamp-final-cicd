@@ -1,11 +1,15 @@
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
-from app.controllers import home_controller, auth_controller, profile_controller, withdraw_controller
+from app.controllers import home_controller, auth_controller, profile_controller, withdraw_controller, product_controller
 
 router = APIRouter()
 
 # home
-router.get("/", response_class=HTMLResponse)(home_controller.home)
+router.get("/")(home_controller.home_page)
+router.get("/profile", response_class=HTMLResponse)(profile_controller.home)
+
+router.get("/product/{product_id}")(product_controller.product_detail_page)
+router.post("/api/favorite")(product_controller.toggle_favorite)
 
 # login-logout
 router.get("/login")(auth_controller.login_page)

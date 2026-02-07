@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - 원자재 시세</title>
+    <style>
+        /* 기본 배경 및 중앙 정렬 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f1f3f5; /* 약간 더 깊이감 있는 배경색 */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center; /* 가로 중앙 정렬 */
+            min-height: 100vh;
+        }
+
+        /* 웹에서 모바일 뷰처럼 보이게 하는 컨테이너 */
+        .container {
+            width: 100%;
+            max-width: 480px; /* 전형적인 모바일 뷰 너비 */
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            padding: 24px;
+            box-sizing: border-box;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05); /* 웹 환경에서 경계선 구분 */
+        }
+
+        .header {
+            margin-bottom: 32px;
+            margin-top: 10px;
+        }
+        
+        .header p {
+            color: #888;
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            margin: 4px 0 0 0;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 24px 0 16px 4px;
+            color: #1a1a1a;
+        }
+
+        .product-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* 카드 디자인 개선 */
+        .product-card {
+            background: white;
+            border-radius: 20px;
+            padding: 18px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            overflow: hidden; /* 확장될 때 내용이 넘치지 않게 */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* 부드러운 확장 애니메이션 */
+            border: 1px solid transparent;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-card.active {
+            border-color: #e9ecef;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        }
+
+        .left-content {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .icon-circle {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px; /* 이모지 배경을 약간 각진 원형으로 */
+            background-color: #f1f3f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .name-box .name-ko {
+            font-size: 16px;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .name-box .name-en {
+            font-size: 12px;
+            color: #adb5bd;
+            font-weight: 500;
+        }
+
+        .right-content {
+            text-align: right;
+        }
+
+        .price {
+            font-size: 17px;
+            font-weight: 700;
+            display: block;
+            color: #212529;
+        }
+
+        .change-rate {
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        /* 상승/하락 색상 및 기호 강조 */
+        .positive { color: #2ecc71; }
+        .negative { color: #e74c3c; }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .profile-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .profile-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-btn i {
+            font-size: 20px;
+            color: #adb5bd;
+        }
+
+        .empty-fav {
+            background: #fff;
+            border-radius: 16px;
+            padding: 30px 20px;
+            text-align: center;
+            border: 2px dashed #dee2e6;
+            color: #868e96;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .empty-fav b { color: #495057; display: block; margin-bottom: 5px; }
+
+        /* 상단 영역 (항상 보임) */
+        .card-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 확장 영역 (평소에는 숨김) */
+        .card-detail {
+            max-height: 0; /* 높이를 0으로 설정 */
+            opacity: 0;
+            transition: all 0.3s ease;
+            padding-top: 0;
+        }
+
+        /* active 클래스가 붙으면 확장 */
+        .product-card.active .card-detail {
+            max-height: 500px; /* 적당한 최대 높이 */
+            opacity: 1;
+            padding-top: 20px;
+            overflow: visible; /* 차트가 잘리지 않게 */
+        }
+
+        /* 차트 빈 칸 (사진 참고) */
+        .chart-box {
+            width: 100%;
+            height: 250px; /* 고정 높이 유지 */
+            background: #f8faff;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            position: relative; /* 중요: 차트가 이 안에 갇히게 함 */
+            border: 1px solid #edf2f7;
+            box-sizing: border-box;
+        }
+
+        /* 상세 분석 버튼 (파란색) */
+        .analysis-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: #5c9eff;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <div>
+                    <p>안녕하세요, {{ user_name if is_logged_in else 'Guest' }}님!</p>
+                    <h1>Home</h1>
+                </div>
+                <div class="profile-btn" id="profileBtn" data-logged-in="{{ 'true' if is_logged_in else 'false' }}" onclick="goToProfile()">
+                    {% if is_logged_in and user_profile_img %}
+                        <img src="{{ user_profile_img }}" alt="Profile">
+                    {% else %}
+                        <span>👤</span> 
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if is_logged_in %}
+            <h2 class="section-title">즐겨찾기</h2>
+        
+            {% if favorites %}
+                <div class="product-list" style="margin-bottom: 30px;">
+                    {% for item in favorites %}
+                    <div class="product-card" onclick="toggleCard(this)">
+                        <div class="card-main">
+                            <div class="left-content">
+                                <div class="icon-circle">{{ item.emoji }}</div>
+                                <div class="name-box">
+                                    <span class="name-ko">{{ item.name_ko }}</span>
+                                    <span class="name-en">{{ item.ticker }}</span>
+                                </div>
+                            </div>
+                            <div class="right-content">
+                                <span class="price">{{ item.price }}</span>
+                                <span class="change-rate {{ 'positive' if item.is_positive else 'negative' }}">
+                                    {{ item.change_rate }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="card-detail">
+                            <div class="chart-box" style="padding: 10px; min-height: 150px;">
+                                <canvas id="chart-{{ item.id }}" width="100%" height="50"></canvas>
+                            </div>
+                            <button class="analysis-btn" onclick="handleAnalysisClick(event, '{{ item.id }}')">
+                                상세 분석
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-fav">
+                    <b>등록된 즐겨찾기가 없어요.</b>
+                    전체 종목에서 관심 있는 작물을 추가해 보세요!
+                </div>
+            {% endif %}
+        {% endif %}
+
+        <h2 class="section-title">전체 종목</h2>
+        
+        <div class="product-list">
+            {% for item in all_products %}
+            <div class="product-card" onclick="toggleCard(this)">
+                <div class="card-main">
+                    <div class="left-content">
+                        <div class="icon-circle">{{ item.emoji }}</div>
+                        <div class="name-box">
+                            <span class="name-ko">{{ item.name_ko }}</span>
+                            <span class="name-en">{{ item.ticker }}</span>
+                        </div>
+                    </div>
+                    <div class="right-content">
+                        <span class="price">{{ item.price }}</span>
+                        <span class="change-rate {{ 'positive' if item.is_positive else 'negative' }}">
+                            {{ item.change_rate }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card-detail">
+                    <div class="chart-box" style="padding: 10px; height: 100px;">
+                        <canvas class="product-chart" data-item-id="{{ item.id }}" width="100%" height="40"></canvas>
+                    </div>
+                    <button class="analysis-btn" onclick="handleAnalysisClick(event, '{{ item.id }}')">
+                        상세 분석
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        function goToProfile() {
+            const btn = document.getElementById('profileBtn');
+            // HTML 속성에서 값을 읽어옵니다.
+            const isLoggedIn = btn.getAttribute('data-logged-in') === 'true';
+
+            if (isLoggedIn) {
+                window.location.href = "/profile";
+            } else {
+                window.location.href = "/login";
+            }
+        }
+
+        function toggleCard(element) {
+            element.classList.toggle('active');
+        }
+
+        function handleAnalysisClick(event, id) {
+            event.stopPropagation();
+
+            const btn = document.getElementById('profileBtn');
+            const isLoggedIn = btn.getAttribute('data-logged-in') === 'true';
+
+            if (!isLoggedIn) {
+                window.location.href = "/login";
+            } else {
+                window.location.href = `/product/${id}`;
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 모든 차트 캔버스를 찾아서 루프를 돕니다.
+        const chartElements = document.querySelectorAll('.product-chart');
+        
+        chartElements.forEach(canvas => {
+            const ctx = canvas.getContext('2d');
+            
+            // 아이템별로 다른 느낌을 주기 위한 랜덤 더미 데이터 생성
+            const dummyData = Array.from({ length: 7 }, () => Math.floor(Math.random() * 50) + 10);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['1일', '2일', '3일', '4일', '5일', '6일', '7일'],
+                    datasets: [{
+                        data: dummyData,
+                        borderColor: '#5c9eff',
+                        backgroundColor: 'rgba(92, 158, 255, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0, // 점 숨기기
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    }
+                }
+            });
+        });
+    });
+    </script>
+
+</body>
+</html>

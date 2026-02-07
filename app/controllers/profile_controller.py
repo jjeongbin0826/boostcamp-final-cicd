@@ -10,6 +10,17 @@ from app.services.profile_service import (
     update_profile,
     upload_profile_image
 )
+from app.services.user_service import get_user_by_session
+
+
+async def home(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    user = get_user_by_session(db, user_id)
+
+    return templates.TemplateResponse(
+        "profile.html",
+        {"request": request, "user": user}
+    )
 
 
 async def edit_profile_page(

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ name_ko }} - 원자재 시세</title>
+    <style>
+        /* 글로벌 색상 변수 */
+        :root {
+            --pos-color: #2ecc71; 
+            --neg-color: #e74c3c; 
+            --primary: #5c9eff;
+            --bg-gray: #f1f3f5;
+            --card-white: #ffffff;
+            --star-active: #f1c40f; 
+        }
+
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background-color: var(--bg-gray); 
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+            min-height: 100vh; 
+            color: #212529; 
+        }
+
+        .container { 
+            width: 100%; 
+            max-width: 480px; 
+            background-color: #f8f9fa; 
+            min-height: 100vh; 
+            padding: 24px; 
+            box-sizing: border-box; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.05); 
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- 네비게이션 (다른 페이지와 통일) --- */
+        .nav-bar {
+            display: flex;
+            align-items: center;
+            height: 44px;
+            margin-bottom: 32px;
+            position: relative; /* 자식 요소 배치를 위한 기준 */
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a1a;
+            cursor: pointer;
+            z-index: 10;
+            padding-right: 10px;
+        }
+
+        .nav-title-group {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-title-text {
+            font-size: 17px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .icon-circle { 
+            width: 36px; 
+            height: 36px; 
+            border-radius: 12px; 
+            background-color: var(--bg-gray); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 18px; 
+        }
+
+        .star-btn { 
+            position: absolute;
+            right: 0;
+            font-size: 24px; 
+            color: #adb5bd; 
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+        .star-btn.active { color: var(--star-active); transform: scale(1.1); }
+
+        /* --- 가격 정보 --- */
+        .price-section { margin-bottom: 24px; display: flex; align-items: baseline; gap: 10px; }
+        .price-main { font-size: 36px; font-weight: 800; margin: 0; letter-spacing: -1px; }
+        .price-sub { font-size: 17px; font-weight: 600; }
+        .positive { color: var(--pos-color); } 
+        .negative { color: var(--neg-color); } 
+
+        /* --- 드롭다운 필터 --- */
+        .filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; position: relative; }
+        .chip { background-color: var(--primary); color: white; padding: 10px 16px; border-radius: 14px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .dropdown-menu { position: absolute; top: 48px; left: 0; background: white; border-radius: 14px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); border: 1px solid #eee; width: 140px; display: none; z-index: 1000; overflow: hidden; }
+        .dropdown-menu.show { display: block; }
+        .dropdown-item { padding: 14px 16px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f8f9fa; }
+        .dropdown-item:hover { background-color: #f1f3f5; color: var(--primary); }
+        .filter-info { font-size: 13px; color: #adb5bd; }
+
+        /* --- 컨텐츠 박스 공통 --- */
+        .placeholder-box { width: 100%; background: var(--card-white); border-radius: 24px; border: 1px solid #edf2f7; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #adb5bd; margin-bottom: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); padding: 20px; }
+        .chart-box { height: 240px; }
+        .report-box { height: 140px; text-align: center; font-weight: 600; }
+
+        .section-title { font-size: 18px; font-weight: 700; margin: 32px 0 16px 4px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-btn { background-color: var(--primary); color: white; padding: 8px 16px; border-radius: 12px; font-size: 12px; border: none; font-weight: 700; cursor: pointer; transition: transform 0.2s; }
+        .chat-btn:active { transform: scale(0.95); }
+
+        /* --- 뉴스 리스트 --- */
+        .news-list { display: flex; flex-direction: column; gap: 12px; }
+        .news-card { background: var(--card-white); border-radius: 20px; padding: 20px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+        .news-card:active { transform: scale(0.98); background: #f8f9fa; }
+        .news-title { margin: 0 0 8px; font-size: 16px; font-weight: 700; line-height: 1.5; color: #212529; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .news-meta { font-size: 13px; color: #adb5bd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-bar">
+            <div class="back-btn" onclick="location.href='/'">〈</div>
+            <div class="nav-title-group">
+                <div class="icon-circle">{{ emoji }}</div>
+                <span class="nav-title-text">{{ name_ko }}</span>
+            </div>
+            <div id="favBtn" class="star-btn {{ 'active' if is_favorite else '' }}" onclick="toggleFavorite('{{ id }}')">
+                {{ '★' if is_favorite else '☆' }}
+            </div>
+        </div>
+
+        <div class="price-section">
+            <h1 class="price-main">{{ price }}</h1>
+            <div class="price-sub {{ 'positive' if is_positive else 'negative' }}">
+                {{ change_display }}
+            </div>
+        </div>
+
+        <div class="filter-row">
+            <div class="chip" id="dropBtn">
+                <span id="selectedTxt">20일 전</span> <small style="margin-left:4px;">▼</small>
+            </div>
+            <div class="dropdown-menu" id="dropMenu">
+                <div class="dropdown-item" onclick="updateOption('5일 전')">5일 전</div>
+                <div class="dropdown-item" onclick="updateOption('20일 전')">20일 전</div>
+                <div class="dropdown-item" onclick="updateOption('60일 전')">60일 전</div>
+            </div>
+            <div class="filter-info">데이터부터 예측에 사용할게요.</div>
+        </div>
+
+        <div class="placeholder-box chart-box">
+            <div style="font-weight: 700;">📈 차트 로딩 중...</div>
+        </div>
+
+        <div class="section-title">
+            AI Report
+            <button class="chat-btn" onclick="location.href='/chat'">CHAT ↗</button>
+        </div>
+        <div class="placeholder-box report-box">
+            <div style="font-size: 28px; margin-bottom: 8px;">🤖</div>
+            <div>분석 리포트를 생성하고 있습니다.</div>
+        </div>
+
+        <div class="section-title">관련 뉴스</div>
+        <div class="news-list">
+            {% for news in news_list %}
+            <div class="news-card" onclick="window.open('{{ news.url }}', '_blank')">
+                <div class="news-content">
+                    <div class="news-title">{{ news.title }}</div>
+                    <div class="news-meta">{{ news.site }} · {{ news.time }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        // 드롭다운 로직
+        const btn = document.getElementById('dropBtn');
+        const menu = document.getElementById('dropMenu');
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menu.classList.toggle('show');
+        });
+
+        window.addEventListener('click', () => menu.classList.remove('show'));
+
+        function updateOption(val) {
+            document.getElementById('selectedTxt').innerText = val;
+            menu.classList.remove('show');
+        }
+
+        // 즐겨찾기 로직
+        async function toggleFavorite(productId) {
+            const favBtn = document.getElementById('favBtn');
+            const isCurrentlyActive = favBtn.classList.contains('active');
+            const nextState = !isCurrentlyActive;
+            
+            // UI 선반응
+            favBtn.classList.toggle('active');
+            favBtn.innerText = nextState ? '★' : '☆';
+
+            try {
+                const response = await fetch('/api/favorite', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        product_id: parseInt(productId), 
+                        is_favorite: nextState 
+                    })
+                });
+                if (!response.ok) throw new Error('서버 처리 실패');
+            } catch (error) {
+                console.error("즐겨찾기 실패:", error);
+                // 실패 시 복구
+                favBtn.classList.toggle('active');
+                favBtn.innerText = isCurrentlyActive ? '★' : '☆';
+                alert("상태 변경에 실패했습니다.");
+            }
+        }
+    </script>
+</body>
+</html>
