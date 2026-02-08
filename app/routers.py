@@ -10,6 +10,7 @@ router.get("/profile", response_class=HTMLResponse)(profile_controller.home)
 
 router.get("/product/{product_id}")(product_controller.product_detail_page)
 router.post("/api/favorite")(product_controller.toggle_favorite)
+router.get("/api/prediction/{product_id}")(product_controller.read_prediction)
 
 # login-logout
 router.get("/login")(auth_controller.login_page)

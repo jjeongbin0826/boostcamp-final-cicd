@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
-from app.models import Product, News, DailyPrice, Favorite
+from sqlalchemy import desc, func
+from app.models import Product, News, DailyPrice, Favorite, PredictPrice
 from datetime import datetime
 
 
@@ -87,3 +87,52 @@ async def toggle_favorite_status(db: Session, member_id: int, product_id: int, i
         db.rollback()
         print(f"Cloud SQL 저장 오류: {e}")
         return False
+    
+
+async def get_prediction_data(db: Session, product_id: int, window_size: int):
+    try:
+        # 1. 실제 가격 데이터 조회 (최신순 80일치 가져와서 날짜순 정렬)
+        # 차트의 앞부분을 구성합니다.
+        daily_prices = db.query(DailyPrice).filter(
+            DailyPrice.product_id == product_id
+        ).order_by(DailyPrice.base_date.desc()).limit(80).all()
+
+        if not daily_prices:
+            print(f"상품 ID {product_id}에 대한 실제 가격 데이터가 없습니다.")
+            return None
+
+        # 다시 날짜 오름차순으로 정렬
+        daily_prices.reverse()
+        latest_base_date = daily_prices[-1].base_date
+
+        predictions = db.query(PredictPrice).filter(
+            PredictPrice.product_id == product_id,
+            PredictPrice.window_size == window_size,
+            PredictPrice.base_date == latest_base_date
+        ).order_by(PredictPrice.predict_date.asc()).limit(20).all()
+
+        total_data = []
+        
+        # 실제 데이터 추가
+        for p in daily_prices:
+            total_data.append({
+                "date": p.base_date.strftime('%Y-%m-%d'),
+                "close": p.closing_price
+            })
+            
+        # 예측 데이터 추가
+        for p in predictions:
+            total_data.append({
+                "date": p.predict_date.strftime('%Y-%m-%d'),
+                "close": p.predicted_close
+            })
+
+        return {
+            "base_date": latest_base_date.strftime('%Y-%m-%d'),
+            "window_size": window_size,
+            "data": total_data  # 전체 100개의 데이터
+        }
+
+    except Exception as e:
+        print(f"데이터 조회 중 예외 발생: {e}")
+        return None

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, BigInteger, ForeignKey, DateTime, Date, UniqueConstraint, Float
+from sqlalchemy import Column, String, BigInteger, Integer, ForeignKey, DateTime, Date, UniqueConstraint, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
@@ -45,6 +45,7 @@ class Product(Base):
     prices = relationship("DailyPrice", back_populates="product", cascade="all, delete-orphan")
     favorites = relationship("Favorite", back_populates="product", cascade="all, delete-orphan")
     news_list = relationship("News", back_populates="product", cascade="all, delete-orphan")
+    predict_price = relationship("PredictPrice", back_populates="product", cascade="all, delete-orphan")
 
 
 class DailyPrice(Base):
@@ -83,3 +84,18 @@ class News(Base):
     published_at = Column(DateTime, nullable=False) 
 
     product = relationship("Product", back_populates="news_list")
+    
+    
+class PredictPrice(Base):
+    __tablename__ = "predict_price"
+
+    # 컬럼 정의
+    predict_id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    product_id = Column(BigInteger, ForeignKey("product.product_id", ondelete="CASCADE"), nullable=False)
+    
+    base_date = Column(DateTime, nullable=False)
+    window_size = Column(Integer, nullable=False)
+    predict_date = Column(DateTime, nullable=False)
+    predicted_close = Column(Float, nullable=False)
+
+    product = relationship("Product", back_populates="predict_price")

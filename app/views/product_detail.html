@@ -125,6 +125,24 @@
         .news-card:active { transform: scale(0.98); background: #f8f9fa; }
         .news-title { margin: 0 0 8px; font-size: 16px; font-weight: 700; line-height: 1.5; color: #212529; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .news-meta { font-size: 13px; color: #adb5bd; }
+
+        .custom-badge {
+            position: absolute;
+            /* top 값은 JS에서 실시간으로 계산해서 넣어줄 것이므로 비워둡니다 */
+            background-color: #4A72D4;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.3;
+            transform: translate(-50%, 0); /* 가로 중심만 맞춤 */
+            z-index: 10;
+            display: none;
+            pointer-events: none;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -159,8 +177,12 @@
             <div class="filter-info">데이터부터 예측에 사용할게요.</div>
         </div>
 
-        <div class="placeholder-box chart-box">
-            <div style="font-weight: 700;">📈 차트 로딩 중...</div>
+        <div class="chart-box" style="padding: 10px; height: 320px; position: relative; background: #fff;">
+            <canvas id="detailChart" width="100%" height="100%"></canvas>
+    
+            <div class="label-start custom-badge" style="position: absolute; pointer-events: none; display: none;"></div>
+            <div class="label-end custom-badge" style="position: absolute; pointer-events: none; display: none;"></div>
+            <div class="label-combined custom-badge" style="position: absolute; pointer-events: none; display: none;"></div>
         </div>
 
         <div class="section-title">
@@ -185,6 +207,9 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+
     <script>
         // 드롭다운 로직
         const btn = document.getElementById('dropBtn');
@@ -196,11 +221,6 @@
         });
 
         window.addEventListener('click', () => menu.classList.remove('show'));
-
-        function updateOption(val) {
-            document.getElementById('selectedTxt').innerText = val;
-            menu.classList.remove('show');
-        }
 
         // 즐겨찾기 로직
         async function toggleFavorite(productId) {
@@ -228,6 +248,209 @@
                 favBtn.classList.toggle('active');
                 favBtn.innerText = isCurrentlyActive ? '★' : '☆';
                 alert("상태 변경에 실패했습니다.");
+            }
+        }
+
+        let currentChart = null;
+        let allPredictions = {}; 
+        let commonLabels = [];
+        let actualPrices = [];
+        let baseDate = "";
+
+        const WINDOWS = [5, 20, 60];
+        const COLORS = {
+            5: { main: '#FFD700', light: 'rgba(255, 215, 0, 0.45)' },  
+            20: { main: '#FF6B6B', light: 'rgba(255, 107, 107, 0.45)' }, 
+            60: { main: '#4ECDC4', light: 'rgba(78, 205, 196, 0.45)' }  
+        };
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            Chart.register(window['chartjs-plugin-annotation']);
+            await initAllData();
+            renderCompleteChart(20); 
+        });
+
+        async function initAllData() {
+            const productId = "{{ id }}";
+            try {
+                const promises = WINDOWS.map(size => 
+                    fetch(`/api/prediction/${productId}?window_size=${size}`).then(res => res.json())
+                );
+                const results = await Promise.all(promises);
+                
+                results.forEach((result, idx) => {
+                    const size = WINDOWS[idx];
+                    const data = result.data;
+                    
+                    if (idx === 0) {
+                        commonLabels = data.map(item => item.date);
+                        baseDate = result.base_date;
+                        const splitIdx = data.length - 21; 
+                        actualPrices = data.map((item, i) => i <= splitIdx ? item.close : null);
+                    }
+                    const splitIdx = data.length - 21;
+                    allPredictions[size] = data.map((item, i) => i >= splitIdx ? item.close : null);
+                });
+            } catch (e) {
+                console.error("데이터 로딩 실패:", e);
+            }
+        }
+
+        async function updateOption(val) {
+            document.getElementById('selectedTxt').innerText = val;
+            menu.classList.remove('show');
+            const size = parseInt(val.replace(/[^0-9]/g, ""));
+            renderCompleteChart(size);
+        }
+
+        function renderCompleteChart(activeSize) {
+            const ctx = document.getElementById('detailChart').getContext('2d');
+            if (currentChart) currentChart.destroy();
+
+            // 부모 컨테이너가 라벨을 자르지 않도록 설정
+            ctx.canvas.parentElement.style.overflow = 'visible';
+
+            const splitIdx = commonLabels.length - 21;
+
+            const datasets = [
+                {
+                    label: '실제 종가',
+                    data: actualPrices,
+                    borderColor: '#5c9eff',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: false,
+                    order: 1
+                }
+            ];
+
+            // 모든 WINDOWS(5, 20, 60)를 루프 돌며 차트에 추가
+            WINDOWS.forEach(size => {
+                const isActive = (size === activeSize);
+                datasets.push({
+                    // 강조된 선은 "예측 종가(N일)", 나머지는 "N일 예측"으로 라벨링
+                    label: isActive ? `예측 종가(${size}일)` : `${size}일 예측`,
+                    data: allPredictions[size],
+                    // 선택된 것만 선명하게, 나머지는 투명도 0.45 적용
+                    borderColor: isActive ? COLORS[size].main : COLORS[size].light,
+                    borderWidth: isActive ? 3.5 : 1.5,
+                    borderDash: isActive ? [] : [4, 4], // 선택 안된건 점선 처리
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: false,
+                    order: isActive ? 0 : 2 // 강조된 선을 가장 앞으로
+                });
+            });
+
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: commonLabels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            bottom: 50, // 라벨이 아래로 삐져나가지 않게 차트 하단 여백 확보
+                            top: 10,
+                            left: 10,
+                            right: 10
+                        }
+                    },
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#333',
+                            bodyColor: '#444',
+                            borderColor: '#ddd',
+                            borderWidth: 1,
+                            padding: 12,
+                            filter: function(tooltipItem) {
+                                const label = tooltipItem.dataset.label;
+                                const activePredictLabel = `예측 종가(${activeSize}일)`;
+                                const hasActualPrice = actualPrices[tooltipItem.dataIndex] !== null;
+                                if (hasActualPrice) {
+                                    return label === '실제 종가';
+                                } else {
+                                    return label === activePredictLabel;
+                                }
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${new Intl.NumberFormat('ko-KR').format(context.parsed.y)}원`;
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                windowBox: {
+                                    type: 'box',
+                                    xMin: Math.max(0, splitIdx - activeSize + 1),
+                                    xMax: splitIdx,
+                                    backgroundColor: 'rgba(92, 158, 255, 0.06)',
+                                    borderColor: 'rgba(92, 158, 255, 0.2)',
+                                    borderWidth: 1,
+                                    drawTime: 'beforeDatasetsDraw'
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: { 
+                            position: 'right',
+                            grid: { color: '#f8f8f8' },
+                            ticks: { 
+                                font: { size: 10 },
+                                callback: (val) => val.toLocaleString()
+                            }
+                        }
+                    },
+                    animation: {
+                        onProgress: (anim) => updateLabels(anim.chart, splitIdx, baseDate, activeSize, commonLabels),
+                        onComplete: (anim) => updateLabels(anim.chart, splitIdx, baseDate, activeSize, commonLabels)
+                    }
+                }
+            });
+        }
+
+        function updateLabels(chart, splitIdx, baseDate, windowSize, labels) {
+            const xAxis = chart.scales.x;
+            const { bottom, left, right } = chart.chartArea;
+            const parent = chart.canvas.parentElement;
+            
+            const lStart = parent.querySelector('.label-start');
+            const lEnd = parent.querySelector('.label-end');
+            const lComb = parent.querySelector('.label-combined');
+
+            const xStart = xAxis.getPixelForValue(Math.max(0, splitIdx - windowSize + 1));
+            const xEnd = xAxis.getPixelForValue(splitIdx);
+            const dist = Math.abs(xEnd - xStart);
+
+            // 삐져나감 방지: 좌표 제한 (left ~ right 범위 내로 고정)
+            const safeXStart = Math.max(left + 30, Math.min(xStart, right - 30));
+            const safeXEnd = Math.max(left + 30, Math.min(xEnd, right - 30));
+
+            if (dist < 110) {
+                lStart.style.display = 'none'; lEnd.style.display = 'none';
+                lComb.style.display = 'block';
+                lComb.innerHTML = `<b>${windowSize}일 학습 데이터</b><br>${baseDate}`;
+                lComb.style.left = ((xStart + dist/2) + 12) + 'px';
+                lComb.style.top = (bottom + 15) + 'px';
+            } else {
+                lComb.style.display = 'none';
+                lStart.style.display = 'block';
+                lStart.innerHTML = `학습 시작<br>${labels[Math.max(0, splitIdx - windowSize + 1)]}`;
+                lStart.style.left = (safeXStart + 12) + 'px'; // 안전 좌표 적용
+                lStart.style.top = (bottom + 15) + 'px';
+
+                lEnd.style.display = 'block';
+                lEnd.innerHTML = `학습 종료<br>${baseDate}`;
+                lEnd.style.left = (safeXEnd + 12) + 'px'; // 안전 좌표 적용
+                lEnd.style.top = (bottom + 15) + 'px';
             }
         }
     </script>

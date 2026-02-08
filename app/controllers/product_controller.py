@@ -2,7 +2,7 @@ from fastapi import Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from app.services.product_service import get_product_detail, toggle_favorite_status
+from app.services.product_service import get_product_detail, toggle_favorite_status, get_prediction_data
 from app.main import templates
 from app.database import get_db
 
@@ -46,3 +46,18 @@ async def toggle_favorite(
         raise HTTPException(status_code=500, detail="데이터베이스 처리 중 오류가 발생했습니다.")
     
     return {"status": "success", "current_state": data.is_favorite}
+
+
+async def read_prediction(
+    product_id: int, 
+    window_size: int = 5, 
+    db: Session = Depends(get_db)
+):
+    # Controller 함수 호출
+    result = await get_prediction_data(db, product_id, window_size)
+    
+    if result is None:
+        # 데이터가 없을 때 404를 내보내면 디버깅이 더 쉬워집니다.
+        raise HTTPException(status_code=404, detail="Prediction data not found")
+        
+    return result
