@@ -1,6 +1,7 @@
 import logging, os
 from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from authlib.integrations.starlette_client import OAuth
 from starlette.middleware.sessions import SessionMiddleware
 from dotenv import load_dotenv
@@ -15,7 +16,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", "very-secret-key"))
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=os.getenv("SESSION_SECRET", "very-secret-key"),
+    max_age=10800  # 3시간 (3 * 3600초)
+)
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 oauth = OAuth()
 oauth.register(

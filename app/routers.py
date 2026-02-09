@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
-from app.controllers import home_controller, auth_controller, profile_controller, withdraw_controller, product_controller
+from app.controllers import home_controller, auth_controller, profile_controller, withdraw_controller, product_controller, chat_controller
 
 router = APIRouter()
 
@@ -31,3 +31,6 @@ router.post("/edit-profile")(profile_controller.process_edit_profile)
 router.get("/withdraw")(withdraw_controller.withdraw_page)
 router.get("/withdraw/verify/{provider}")(withdraw_controller.withdraw_verify)
 router.get("/oauth/withdraw/{provider}")(withdraw_controller.auth_withdraw)
+
+# 채팅
+router.get("/chat-loading")(chat_controller.chat_loading)
