@@ -1,7 +1,8 @@
-from sqlalchemy import Column, String, BigInteger, Integer, ForeignKey, DateTime, Date, UniqueConstraint, Float
+from sqlalchemy import Column, String, BigInteger, Integer, ForeignKey, DateTime, Date, UniqueConstraint, Float, Enum, JSON, func
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from app.database import Base
+from app.database import Base, ReportBase
 
 
 class User(Base):
@@ -99,3 +100,58 @@ class PredictPrice(Base):
     predicted_close = Column(Float, nullable=False)
 
     product = relationship("Product", back_populates="predict_price")
+
+
+# ── Report DB 모델 ──
+
+class ReportUser(ReportBase):
+    __tablename__ = "users"
+
+    member_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class Conversation(ReportBase):
+    __tablename__ = "conversations"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    member_id = Column(BigInteger, nullable=False, index=True)
+    report_id = Column(BigInteger, ForeignKey("reports.id"), nullable=True)
+    active_until_utc = Column(DateTime, nullable=True, index=True)
+    status = Column(Enum('active', 'readonly', name='conversation_status'), nullable=False, server_default='active')
+    locked_at_utc = Column(DateTime, nullable=True)
+    last_message_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    item_type = Column(String(50), nullable=True)
+
+    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+
+
+class Report(ReportBase):
+    __tablename__ = "reports"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    publish_date = Column(Date, nullable=False, index=True)
+    keyword = Column(String(100), nullable=False, index=True)
+    content = Column(LONGTEXT, nullable=False)
+    meta = Column(JSON, nullable=True)
+    images = Column(JSON, nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class Message(ReportBase):
+    __tablename__ = "messages"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    conversation_id = Column(BigInteger, ForeignKey("conversations.id"), nullable=False, index=True)
+    seq = Column(Integer, nullable=False)
+    role = Column(Enum('system', 'user', 'assistant', 'tool', name='message_role'), nullable=False)
+    content = Column(JSON, nullable=False)
+    provider = Column(String(32), nullable=True)
+    model = Column(String(64), nullable=True)
+    token_in = Column(Integer, nullable=True)
+    token_out = Column(Integer, nullable=True)
+
+    conversation = relationship("Conversation", back_populates="messages")
+
