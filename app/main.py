@@ -6,7 +6,7 @@ from authlib.integrations.starlette_client import OAuth
 from starlette.middleware.sessions import SessionMiddleware
 from dotenv import load_dotenv
 
-from app.database import engine
+from app.database import engine, report_engine
 import app.models as models
 
 
@@ -44,6 +44,10 @@ oauth.register(
 templates = Jinja2Templates(directory="app/views")
 
 models.Base.metadata.create_all(bind=engine)
+try:
+    models.ReportBase.metadata.create_all(bind=report_engine)
+except Exception as e:
+    logger.warning(f"Report DB 테이블 생성 실패 (무시하고 계속): {e}")
 
 # router 등록
 import app.routers as routers

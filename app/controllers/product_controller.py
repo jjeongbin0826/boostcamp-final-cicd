@@ -2,21 +2,24 @@ from fastapi import Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from app.services.product_service import get_product_detail, toggle_favorite_status, get_prediction_data
+from app.services.product_service import get_product_detail, toggle_favorite_status, get_prediction_data, get_report_by_ticker
 from app.main import templates
-from app.database import get_db
+from app.database import get_db, get_report_db
 
 
-async def product_detail_page(product_id: int, request: Request, db: Session = Depends(get_db)):
+async def product_detail_page(product_id: int, request: Request, db: Session = Depends(get_db), report_db: Session = Depends(get_report_db)):
     user_id = request.session.get("user_id")
-    
+
     data = await get_product_detail(db, product_id, user_id)
-    
+
     if not data:
         return RedirectResponse(url="/login", status_code=303)
 
+    report_content = await get_report_by_ticker(report_db, data["ticker"])
+    data["report_content"] = report_content
+
     return templates.TemplateResponse("product_detail.html", {
-        "request": request, 
+        "request": request,
         **data
     })
     

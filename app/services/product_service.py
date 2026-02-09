@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
-from app.models import Product, News, DailyPrice, Favorite, PredictPrice
-from datetime import datetime
+from app.models import Product, News, DailyPrice, Favorite, PredictPrice, Report
+from datetime import datetime, date
 
 
 async def get_product_detail(db: Session, product_id: int, user_id: int = None):
@@ -88,6 +88,19 @@ async def toggle_favorite_status(db: Session, member_id: int, product_id: int, i
         print(f"Cloud SQL 저장 오류: {e}")
         return False
     
+
+async def get_report_by_ticker(report_db: Session, ticker: str):
+    today = date.today()
+    report = report_db.query(Report).filter(
+        Report.keyword == ticker,
+        Report.publish_date == today
+    ).first()
+
+    if not report:
+        return None
+
+    return report.content
+
 
 async def get_prediction_data(db: Session, product_id: int, window_size: int):
     try:

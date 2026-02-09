@@ -34,3 +34,5 @@ router.get("/oauth/withdraw/{provider}")(withdraw_controller.auth_withdraw)
 
 # 채팅
 router.get("/chat-loading")(chat_controller.chat_loading)
+router.get("/chat/{conversation_id}")(chat_controller.chat_page)
+router.post("/api/chat/message")(chat_controller.send_message)

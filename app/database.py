@@ -23,3 +23,26 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# Report DB
+report_password = urllib.parse.quote(os.getenv('REPORT_DB_PASS', ''))
+REPORT_DATABASE_URL = (
+    f"mysql+pymysql://{os.getenv('REPORT_DB_USER')}:{report_password}"
+    f"@{os.getenv('REPORT_DB_HOST')}:{os.getenv('REPORT_DB_PORT', '3306')}/{os.getenv('REPORT_DB_NAME')}"
+)
+
+report_engine = create_engine(
+    REPORT_DATABASE_URL,
+    connect_args={"ssl": {}, "connect_timeout": 5},
+    pool_pre_ping=True
+)
+ReportSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=report_engine)
+ReportBase = declarative_base()
+
+def get_report_db():
+    db = ReportSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
